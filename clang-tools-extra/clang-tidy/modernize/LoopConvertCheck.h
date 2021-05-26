@@ -77,6 +77,7 @@ private:
   std::unique_ptr<TUTrackingInfo> TUInfo;
   const unsigned long long MaxCopySize;
   const Confidence::Level MinConfidence;
+  const unsigned int AutoTypeNameLength;
   const VariableNamer::NamingStyle NamingStyle;
   utils::IncludeInserter Inserter;
   bool UseReverseRanges;

@@ -461,6 +461,7 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
       MaxCopySize(Options.get("MaxCopySize", 16ULL)),
       MinConfidence(Options.get("MinConfidence", Confidence::CL_Reasonable)),
+      AutoTypeNameLength(Options.get("AutoTypeNameLength", 0)),
       NamingStyle(Options.get("NamingStyle", VariableNamer::NS_CamelCase)),
       Inserter(Options.getLocalOrGlobal("IncludeStyle",
                                         utils::IncludeSorter::IS_LLVM)),
@@ -484,6 +485,7 @@ LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
 void LoopConvertCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "MaxCopySize", MaxCopySize);
   Options.store(Opts, "MinConfidence", MinConfidence);
+  Options.store(Opts, "AutoTypeNameLength", AutoTypeNameLength);
   Options.store(Opts, "NamingStyle", NamingStyle);
   Options.store(Opts, "IncludeStyle", Inserter.getStyle());
   Options.store(Opts, "UseCxx20ReverseRanges", UseCxx20IfAvailable);
@@ -627,8 +629,12 @@ void LoopConvertCheck::doConversion(
   SourceRange ParenRange(Loop->getLParenLoc(), Loop->getRParenLoc());
 
   QualType Type = Context->getAutoDeductType();
-  if (!Descriptor.ElemType.isNull() && Descriptor.ElemType->isFundamentalType())
-    Type = Descriptor.ElemType.getUnqualifiedType();
+  if (!Descriptor.ElemType.isNull()) {
+    auto FullType = Descriptor.ElemType.getUnqualifiedType();
+    if (Descriptor.ElemType->isFundamentalType() ||
+        FullType.getAsString(getLangOpts()).length() <= AutoTypeNameLength)
+      Type = FullType;
+  }
   Type = Type.getDesugaredType(*Context);
 
   // If the new variable name is from the aliased variable, then the reference
